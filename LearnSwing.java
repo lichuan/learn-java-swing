@@ -16,8 +16,258 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LearnSwing {
+    enum State_21 {
+        BLANK, XX, OO
+    }
+
     public static void main(String[] args) throws Exception {
-        learn_20();
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        learn_25(args);
+    }
+
+    static void learn_25(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                if(args.length == 0) {
+                    System.out.println("Usage: LookAndFeel [cross|system|motif]");
+                    System.exit(1);
+                }
+                if(args[0].equals("cross")) {
+                    try {
+                        UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+                    } catch(Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if(args[0].equals("system")) {
+                    try {
+                        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if(args[0].equals("motif")) {
+                    try {
+                        UIManager.setLookAndFeel("com.sun.java.swing.plaf.motif.MotifLookAndFeel");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("Error arguments");
+                    System.exit(1);
+                }
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                String[] choices =
+                        "Eney Meeny Minnie Mickey Moe Larry Curly".split(" ");
+                Component[] samples = {
+                        new JButton("JButton"),
+                        new JTextField("JTextfield"),
+                        new JLabel("JLabel"),
+                        new JCheckBox("JCheckbox"),
+                        new JComboBox<>(choices),
+                        new JList<>(choices)
+                };
+                frame.setLayout(new FlowLayout());
+                for(Component comp : samples) {
+                    frame.add(comp);
+                }
+            }
+        });
+    }
+
+    static void learn_24() {
+        JFrame frame = new JFrame("hello myui");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setVisible(true);
+        frame.setLayout(new GridLayout(2, 1));
+        JProgressBar pb = new JProgressBar();
+        ProgressMonitor pm = new ProgressMonitor(frame, "monitoring progress..", "Test", 0, 100);
+        JSlider sb = new JSlider(JSlider.HORIZONTAL, 0, 100, 60);
+        frame.add(pb);
+        pm.setProgress(0);
+        pm.setMillisToPopup(1000);
+        sb.setValue(0);
+        sb.setPaintTicks(true);
+        sb.setMajorTickSpacing(20);
+        sb.setMinorTickSpacing(5);
+        sb.setBorder(new TitledBorder("Slide me"));
+        pb.setModel(sb.getModel());
+        frame.add(sb);
+        sb.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                pm.setProgress(sb.getValue());
+            }
+        });
+    }
+
+    static void learn_23() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                frame.setLayout(new FlowLayout());
+                JButton b = new JButton(
+                        "<html><b><font size=+2>" +
+                        "<center>Hello<br><i>Press me now!");
+                b.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        frame.add(new JLabel("<html>" +
+                                "<i><font size=+4>Kapow!"));
+                        frame.validate();
+                    }
+                });
+                frame.add(b);
+            }
+        });
+    }
+
+    static void learn_22() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                JTextField
+                        fileName = new JTextField(),
+                        dir = new JTextField();
+                JButton
+                        open = new JButton("open"),
+                        save = new JButton("Save");
+                JPanel p = new JPanel();
+                open.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        JFileChooser c = new JFileChooser();
+                        int rVal = c.showOpenDialog(frame);
+                        if(rVal == JFileChooser.APPROVE_OPTION) {
+                            fileName.setText(c.getSelectedFile().getName());
+                            dir.setText(c.getCurrentDirectory().toString());
+                        }
+                        if(rVal == JFileChooser.CANCEL_OPTION) {
+                            fileName.setText("You pressed cancel");
+                            dir.setText("");
+                        }
+                    }
+                });
+                p.add(open);
+                save.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        JFileChooser c = new JFileChooser();
+                        int rVal = c.showSaveDialog(frame);
+                        if(rVal == JFileChooser.APPROVE_OPTION) {
+                            fileName.setText(c.getSelectedFile().getName());
+                            dir.setText(c.getCurrentDirectory().toString());
+                        }
+                        if(rVal == JFileChooser.CANCEL_OPTION) {
+                            fileName.setText("you pressed cancel.....");
+                            dir.setText("");
+                        }
+                    }
+                });
+                p.add(save);
+                frame.add(p, BorderLayout.SOUTH);
+                dir.setEditable(false);
+                fileName.setEditable(false);
+                p = new JPanel();
+                p.setLayout(new GridLayout(2, 1));
+                p.add(fileName);
+                p.add(dir);
+                frame.add(p, BorderLayout.NORTH);
+            }
+        });
+    }
+
+    static void learn_21() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                JTextField
+                        rows = new JTextField("3"),
+                        cols = new JTextField("3");
+                class ToeDialog extends JDialog {
+                    State_21 turn = State_21.XX;
+                    class ToeButton extends JPanel {
+                        State_21 state = State_21.BLANK;
+                        ToeButton() {
+                            addMouseListener(new MouseAdapter() {
+                                @Override
+                                public void mousePressed(MouseEvent e) {
+                                    if(state == State_21.BLANK) {
+                                        state = turn;
+                                        turn = turn == State_21.XX ? State_21.OO : State_21.XX;
+                                    } else {
+                                        state = state == State_21.XX ? State_21.OO : State_21.XX;
+                                    }
+                                    repaint();
+                                }
+                            });
+                        }
+                        public void paintComponent(Graphics g) {
+                            super.paintComponent(g);
+                            int
+                                    x1 = 0, y1 = 0,
+                                    x2 = getSize().width - 1,
+                                    y2 = getSize().height - 1;
+                            g.drawRect(x1, y1, x2, y2);
+                            x1 = x2 / 4;
+                            y1 = y2 / 4;
+                            int wide = x2 / 2, high = y2 / 2;
+                            if(state == State_21.XX) {
+                                g.drawLine(x1, y1, x1 + wide, y1 + high);
+                                g.drawLine(x1, y1 + high, x1 + wide, y1);
+                            }
+                            if(state == State_21.OO) {
+                                g.drawOval(x1, y1, x1 + wide / 2, y1 + high / 2);
+                            }
+                        }
+                    }
+                    ToeDialog(int cellsWide, int cellsHigh) {
+                        setTitle("The game itself");
+                        setLayout(new GridLayout(cellsWide, cellsHigh));
+                        for(int i = 0; i < cellsWide * cellsHigh; ++i) {
+                            add(new ToeButton());
+                        }
+                        setSize(cellsWide * 50, cellsHigh * 50);
+                        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+                    }
+                }
+                JPanel p = new JPanel();
+                p.setLayout(new GridLayout(2, 2));
+                p.add(new JLabel("Rows", JLabel.CENTER));
+                p.add(rows);
+                p.add(new JLabel("Columns", JLabel.CENTER));
+                p.add(cols);
+                frame.add(p, BorderLayout.NORTH);
+                JButton b = new JButton("go");
+                b.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        JDialog d = new ToeDialog(new Integer(rows.getText()), new Integer(cols.getText()));
+                        d.setVisible(true);
+                    }
+                });
+                frame.add(b, BorderLayout.SOUTH);
+            }
+        });
     }
 
     static void learn_20() {
