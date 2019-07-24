@@ -7,29 +7,541 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import java.awt.*;
 import java.awt.event.*;
+import java.beans.*;
+import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+class Spots {}
+class Frog {
+    private int jumps;
+    private Color color;
+    private Spots spots;
+    private boolean jmpr;
+    public int getJumps() {
+        return jumps;
+    }
+    public void setJumps(int newJumps) {
+        jumps = newJumps;
+    }
+    public Color getColor() {
+        return color;
+    }
+    public void setColor(Color newColor) {
+        color = newColor;
+    }
+    public Spots getSpots() {
+        return spots;
+    }
+    public void setSpots(Spots newSpots) {
+        spots = newSpots;
+    }
+    public boolean isJumper() {
+        return jmpr;
+    }
+    public void setJumper(boolean j) {
+        jmpr = j;
+    }
+    public void addActionListener(ActionListener l ) {
+
+    }
+    public void removeActionListener(ActionListener l) {
+
+    }
+    public void addKeyListener(KeyListener l) {
+
+    }
+    public void removeKeyListener(KeyListener l) {
+
+    }
+    public void croak() {
+        System.out.println("Ribbet");
+    }
+}
 
 public class LearnSwing {
     enum State_21 {
         BLANK, XX, OO
     }
-
-    public static void main(String[] args) throws Exception {
-        try {
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    static class CallableTask implements Callable<String>, Runnable {
+        static int counter = 0;
+        final int id = counter++;
+        public void run() {
+            System.out.println(this + " start....");
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch (InterruptedException ex) {
+                System.out.println(this + " interrupted");
+                return;
+            }
+            System.out.println(this + " completed");
         }
-        learn_25(args);
+        public String toString() {
+            return "task " + id;
+        }
+        long id() {
+            return id;
+        }
+        public String call() {
+            run();
+            return "Return value of " + this;
+        }
+    }
+    class TaskItem<R, C extends Callable<R>> {
+        final Future<R> future;
+        final C task;
+        TaskItem(Future<R> future, C task) {
+            this.future = future;
+            this.task = task;
+        }
+    }
+    class TaskManager<R, C extends Callable<R>> extends ArrayList<TaskItem<R, C>> {
+        ExecutorService exec = Executors.newSingleThreadExecutor();
+        void add(C task) {
+            add(new TaskItem<>(exec.submit(task), task));
+        }
+        List<R> getResults() {
+            Iterator<TaskItem<R, C>> items = iterator();
+            List<R> results = new ArrayList<>();
+            while(items.hasNext()) {
+                TaskItem<R, C> item = items.next();
+                if(item.future.isDone()) {
+                    try {
+                        results.add(item.future.get());
+                    } catch (Exception ex) {
+                        System.out.println("add isdone future failed");
+                        throw new RuntimeException(ex);
+                    }
+                    items.remove();
+                }
+            }
+            return results;
+        }
+        List<String> purge() {
+            Iterator<TaskItem<R, C>> items = iterator();
+            List<String> results = new ArrayList<>();
+            while(items.hasNext()) {
+                TaskItem<R, C> item = items.next();
+                if(!item.future.isDone()) {
+                    results.add("Cancelling " + item.task);
+                    item.future.cancel(true);
+                    items.remove();
+                }
+            }
+            return results;
+        }
+    }
+    static class MonitoredCallable implements Callable<String> {
+        static int counter = 0;
+        final int id = counter++;
+        final ProgressMonitor monitor;
+        final static int MAX = 8;
+        MonitoredCallable(ProgressMonitor monitor) {
+            this.monitor = monitor;
+            monitor.setNote(toString());
+            monitor.setMaximum(MAX - 1);
+            monitor.setMillisToPopup(500);
+        }
+        public String call()  {
+            System.out.println(this + " started");
+            try {
+                for(int i = 0; i < MAX; ++i) {
+                    TimeUnit.MILLISECONDS.sleep(500);
+                    if(monitor.isCanceled()) {
+                        Thread.currentThread().interrupt();
+                    }
+                    final int progress = i;
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            monitor.setProgress(progress);
+                        }
+                    });
+                }
+            } catch (InterruptedException e) {
+                monitor.close();
+                System.out.println(this + " interrupted");
+                return "Result: " + this + " interrupted";
+            }
+            System.out.println(this + " completed");
+            return " result: " + this + " completed";
+        }
+        public String toString() {
+            return "Task " + id;
+        }
     }
 
-    static void learn_25(String[] args) {
+    static class CBox extends JPanel implements Runnable {
+        int pause;
+        static Random rand = new Random();
+        Color color = new Color(0);
+        public void paintComponent(Graphics g) {
+            g.setColor(color);
+            Dimension s = getSize();
+            g.fillRect(0, 0, s.width, s.height);
+        }
+        CBox(int pause) {
+            this.pause = pause;
+        }
+        public void run() {
+            try {
+                while(!Thread.interrupted()) {
+                    color = new Color(rand.nextInt(0xffffff));
+                    repaint();
+                    TimeUnit.MILLISECONDS.sleep(pause);
+                }
+            } catch(InterruptedException e) {
+
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        new LearnSwing().learn_31();
+    }
+
+    void learn_31() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                class BangBean extends JPanel implements Serializable {
+                    int xm, ym;
+                    int cSize = 20;
+                    String text = "Bang";
+                    int fontSize = 48;
+                    Color tcolor = Color.RED;
+                    ActionListener actionListener;
+                    BangBean() {
+                        addMouseListener(new MouseAdapter() {
+                            @Override
+                            public void mousePressed(MouseEvent e) {
+                                Graphics g = getGraphics();
+                                g.setColor(tcolor);
+                                g.setFont(new Font("TimesRoman", Font.BOLD, fontSize));
+                                int width = g.getFontMetrics().stringWidth(text);
+                                g.drawString(text, (getSize().width - width) / 2, getSize().height / 2);
+                                g.dispose();
+                                if(actionListener != null) {
+                                    actionListener.actionPerformed(new ActionEvent(BangBean.this, ActionEvent.ACTION_PERFORMED, null));
+                                }
+                            }
+                        });
+                        addMouseMotionListener(new MouseMotionAdapter() {
+                            @Override
+                            public void mouseMoved(MouseEvent e) {
+                                xm = e.getX();
+                                ym = e.getY();
+                                repaint();
+                            }
+                        });
+                    }
+                    public int getCircleSize() {
+                        return cSize;
+                    }
+                    public void setCircleSize(int newSize) {
+                        cSize = newSize;
+                    }
+                    public String getBangText() {
+                        return text;
+                    }
+                    public void setBangText(String newText) {
+                        text = newText;
+                    }
+                    public int getFontSize() {
+                        return fontSize;
+                    }
+                    public void setFontSize(int newSize) {
+                        fontSize = newSize;
+                    }
+                    public Color getTextColor() {
+                        return tcolor;
+                    }
+                    public void setTextColor(Color newColor) {
+                        tcolor = newColor;
+                    }
+                    public void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        g.setColor(Color.BLACK);
+                        g.drawOval(xm - cSize / 2, ym - cSize / 2, cSize, cSize);
+                    }
+                    void addActionListener(ActionListener l) throws TooManyListenersException {
+                        if(actionListener != null) {
+                            throw new TooManyListenersException();
+                        }
+                        actionListener = l;
+                    }
+                    void removeActionListener(ActionListener l) {
+                        actionListener = null;
+                    }
+                    public Dimension getPreferredSize() {
+                        return new Dimension(200, 200);
+                    }
+                }
+                BangBean bb = new BangBean();
+                JTextField txt = new JTextField(20);
+                try {
+                    bb.addActionListener(new ActionListener() {
+                        int count = 0;
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            txt.setText("Bangbean action " + count++);
+                        }
+                    });
+                } catch(TooManyListenersException e) {
+                    txt.setText("Too many listeners");
+                }
+                frame.add(bb);
+                frame.add(BorderLayout.SOUTH, txt);
+            }
+        });
+    }
+
+    void learn_30() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                JTextField query = new JTextField(20);
+                JTextArea results = new JTextArea();
+                class Dumper implements ActionListener {
+                    public void actionPerformed(ActionEvent e) {
+                        String name = query.getText();
+                        Class<?> c = null;
+                        try {
+                            c = Class.forName(name);
+                        } catch(ClassNotFoundException ex) {
+                            results.setText("Couldn't find " + name);
+                            return;
+                        }
+                        results.setText("");
+                        BeanInfo bi = null;
+                        try {
+                            bi = Introspector.getBeanInfo(c, Object.class);
+                        } catch(IntrospectionException ex) {
+                            results.append("Couldn't introspect " + c.getName() + "\n");
+                            return;
+                        }
+                        for(PropertyDescriptor d : bi.getPropertyDescriptors()) {
+                            Class<?> p = d.getPropertyType();
+                            if(p == null) {
+                                continue;
+                            }
+                            results.append("Property type:\n" + p.getName() + " Property name: \n" + d.getName() + "\n");
+                            Method readMethod = d.getReadMethod();
+                            if(readMethod != null) {
+                                results.append("Read Method:\n" + readMethod + "\n");
+                            }
+                            Method writeMethod = d.getWriteMethod();
+                            if(writeMethod != null) {
+                                results.append("Write Method:\n" + writeMethod + "\n");
+                            }
+                            results.append("============================\n");
+                        }
+                        results.append("public methods:\n");
+                        for(MethodDescriptor m : bi.getMethodDescriptors()) {
+                            results.append(m.getMethod().toString() + "\n");
+                        }
+                        results.append("================================");
+                        results.append("event support:\n");
+                        for(EventSetDescriptor ev : bi.getEventSetDescriptors()) {
+                            results.append("Listener type:\n" + ev.getListenerType().getName() + "\n");
+                            for(Method lm : ev.getListenerMethods()) {
+                                results.append("Listener methods:\n" + lm.getName() + "\n");
+                            }
+                            for(MethodDescriptor lmd : ev.getListenerMethodDescriptors()) {
+                                results.append("Method descriptor:\n" + lmd.getMethod() + "\n");
+                            }
+                            Method addListener = ev.getAddListenerMethod();
+                            results.append("add listener method:\n" + addListener + "\n");
+                            Method removeListener = ev.getRemoveListenerMethod();
+                            results.append("remove listener method:\n" + removeListener + "\n");
+                            results.append("=========================\n");
+                        }
+                    }
+                }
+                JPanel p = new JPanel();
+                p.setLayout(new FlowLayout());
+                p.add(new JLabel("Qualified bean name:"));
+                p.add(query);
+                frame.add(BorderLayout.NORTH, p);
+                frame.add(new JScrollPane(results));
+                Dumper dmpr = new Dumper();
+                query.addActionListener(dmpr);
+                query.setText("frogbean.frog");
+                dmpr.actionPerformed(new ActionEvent(dmpr, 0, ""));
+            }
+        });
+    }
+
+    void learn_29(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                int grid = 12;
+                int pause = 50;
+                ExecutorService exec = Executors.newCachedThreadPool();
+                if(args.length > 0) {
+                    grid = new Integer(args[0]);
+                }
+                if(args.length > 1) {
+                    pause = new Integer(args[1]);
+                }
+                frame.setLayout(new GridLayout(grid, grid));
+                for(int i = 0; i < grid * grid; ++i) {
+                    CBox cb = new CBox(pause);
+                    frame.add(cb);
+                    exec.execute(cb);
+                }
+            }
+        });
+    }
+
+    void learn_28() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                frame.setLayout(new FlowLayout());
+                JButton
+                        b1 = new JButton("start long running task"),
+                        b2 = new JButton("end long running task"),
+                        b3 = new JButton("get results");
+                TaskManager<String, MonitoredCallable> manager = new TaskManager<>();
+                b1.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        MonitoredCallable task = new MonitoredCallable(
+                                new ProgressMonitor(frame, "long-running task", "", 0, 0));
+                        manager.add(task);
+                        System.out.println(task + " added to the queue");
+                    }
+                });
+                b2.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        for(String result : manager.purge()) {
+                            System.out.println(result);
+                        }
+                    }
+                });
+                b3.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        for(String result : manager.getResults()) {
+                            System.out.println(result);
+                        }
+                    }
+                });
+                frame.add(b1);
+                frame.add(b2);
+                frame.add(b3);
+            }
+        });
+    }
+
+    void learn_27() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                frame.setLayout(new FlowLayout());
+                JButton
+                        b1 = new JButton("start long running task"),
+                        b2 = new JButton("end long running task"),
+                        b3 = new JButton("get results");
+                TaskManager<String, CallableTask> manager = new TaskManager<>();
+                b1.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        CallableTask task = new CallableTask();
+                        manager.add(task);
+                        System.out.println(task + " added to the queue");
+                    }
+                });
+                b2.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        for(String result : manager.purge()) {
+                            System.out.println(result);
+                        }
+                    }
+                });
+                b3.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        for(TaskItem<String, CallableTask> tt : manager) {
+                            tt.task.id();
+                        }
+                        for(String result : manager.getResults()) {
+                            System.out.println(result);
+                        }
+                    }
+                });
+                frame.add(b1);
+                frame.add(b2);
+                frame.add(b3);
+            }
+        });
+    }
+
+    void learn_26() {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("hello myui");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+                frame.setLayout(new FlowLayout());
+                JButton
+                        b1 = new JButton("start long running task"),
+                        b2 = new JButton("end long running task");
+                b1.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            TimeUnit.SECONDS.sleep(3);
+                        } catch (InterruptedException ex) {
+                            System.out.println("task interrupted");
+                            return;
+                        }
+                        System.out.println("task completed");
+                    }
+                });
+                b2.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+                frame.add(b1);
+                frame.add(b2);
+            }
+        });
+    }
+
+    void learn_25(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -81,7 +593,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_24() {
+    void learn_24() {
         JFrame frame = new JFrame("hello myui");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
@@ -108,7 +620,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_23() {
+    void learn_23() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -133,7 +645,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_22() {
+    void learn_22() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -192,7 +704,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_21() {
+    void learn_21() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -270,7 +782,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_20() {
+    void learn_20() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -307,7 +819,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_19() {
+    void learn_19() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -367,7 +879,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_18() {
+    void learn_18() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -420,7 +932,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_17() {
+    void learn_17() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -559,7 +1071,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_16() {
+    void learn_16() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -597,7 +1109,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_15() {
+    void learn_15() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -651,7 +1163,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_14() {
+    void learn_14() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -682,7 +1194,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_13() {
+    void learn_13() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -743,7 +1255,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_12() {
+    void learn_12() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -789,7 +1301,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_11() {
+    void learn_11() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -825,7 +1337,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_10() {
+    void learn_10() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -877,7 +1389,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_9() {
+    void learn_9() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -902,7 +1414,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_8() {
+    void learn_8() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -936,7 +1448,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_7() {
+    void learn_7() {
         class Inner {
             String s = "";
             Inner() {
@@ -1025,7 +1537,7 @@ public class LearnSwing {
         new Inner();
     }
 
-    static void learn_6() {
+    void learn_6() {
         class Inner {
             boolean mad = false;
             Inner() {
@@ -1087,7 +1599,7 @@ public class LearnSwing {
         new Inner();
     }
 
-    static void learn_5() {
+    void learn_5() {
         SwingUtilities.invokeLater(new Runnable() {
             JPanel makeBPanel(Class<? extends AbstractButton> kind, String[] ids) {
                 ButtonGroup bg = new ButtonGroup();
@@ -1127,7 +1639,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_4() {
+    void learn_4() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -1152,7 +1664,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_3() {
+    void learn_3() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -1258,7 +1770,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_2() {
+    void learn_2() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -1309,7 +1821,7 @@ public class LearnSwing {
         });
     }
 
-    static void learn_1() {
+    void learn_1() {
         SwingUtilities.invokeLater(new Runnable() {
             @Override public void run() {
                 JFrame frame = new JFrame("hello fmy swing");
